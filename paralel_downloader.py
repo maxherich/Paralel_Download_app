@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import requests
 
 
 class ParallelDownloader:
@@ -49,3 +51,15 @@ class ParallelDownloader:
 
         self.lbl_status = tk.Label(frame_control, textvariable=self.status_var, font=("Arial", 10))
         self.lbl_status.pack()
+
+    def get_file_info(self, url):
+        try:
+            response = requests.head(url, allow_redirects=True)
+            size = int(response.headers.get('content-length', 0))
+            accept_ranges = response.headers.get('accept-ranges', 'none')
+            return size, accept_ranges == 'bytes'
+        except Exception as e:
+            return 0, False
+
+
+
