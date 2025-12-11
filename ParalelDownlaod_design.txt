@@ -1,0 +1,12 @@
+Paralel Downloader
+
+- aplikace v pythonu
+- stahovaní souborů paralelně
+	- využít všechny jádra procesoru
+
+- okno pomocí tkinter
+	- dva boxy pro zadání textu
+		- pro URL stahovaného souboru
+		- pro cestu kam chceme soubor uložit
+	- tlačítko pro stahování
+	- progress bar stahování
