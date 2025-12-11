@@ -61,5 +61,9 @@ class ParallelDownloader:
         except Exception as e:
             return 0, False
 
+    def browse_file(self):
+        filename = filedialog.asksaveasfilename(title="Save as")
+        if filename:
+            self.path_var.set(filename)
 
 
