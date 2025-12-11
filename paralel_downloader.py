@@ -145,3 +145,9 @@ class ParallelDownloader:
             self.is_downloading = False
             self.btn_start.config(state="normal")
 
+    def update_progress(self):
+        if self.total_size > 0:
+            percentage = (self.downloaded_bytes / self.total_size) * 100
+            self.progress_var.set(percentage)
+            self.status_var.set(
+                f"Download: {percentage:.1f}% ({self.downloaded_bytes // 1024 // 1024} MB / {self.total_size // 1024 // 1024} MB)")
