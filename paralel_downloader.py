@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import requests
+import threading
+import os
+from concurrent.futures import ThreadPoolExecutor
 
 
 class ParallelDownloader:
@@ -66,4 +69,79 @@ class ParallelDownloader:
         if filename:
             self.path_var.set(filename)
 
+    def start_download_thread(self):
+        if self.is_downloading:
+            return
+
+        url = self.url_var.get()
+        path = self.path_var.get()
+
+        if not url or not path:
+            messagebox.showerror("Error", "You have to enter URL and PATH!")
+            return
+
+        self.is_downloading = True
+        self.btn_start.config(state="disabled")
+        threading.Thread(target=self.run_download, args=(url, path), daemon=True).start()
+
+    def download_chunk(self, url, start, end, part_num, temp_filename):
+        headers = {'Range': f'bytes={start}-{end}'}
+        try:
+            with requests.get(url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                with open(temp_filename, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            self.downloaded_bytes += len(chunk)
+                            self.update_progress()
+        except Exception as e:
+            print(f"Error with part {part_num}: {e}")
+
+    def run_download(self, url, path):
+        try:
+            self.status_var.set("Zjišťuji informace o souboru...")
+            file_size, support_ranges = self.get_file_info(url)
+            self.total_size = file_size
+            self.downloaded_bytes = 0
+
+            cpu_count = os.cpu_count()
+            self.status_var.set(f"Paralel download with {cpu_count} threads...")
+
+            chunk_size = file_size // cpu_count
+            ranges = []
+            temp_files = []
+
+            for i in range(cpu_count):
+                start = i * chunk_size
+                end = start + chunk_size - 1 if i < cpu_count - 1 else file_size
+                temp_name = f"{path}.part{i}"
+                ranges.append((start, end, i, temp_name))
+                temp_files.append(temp_name)
+
+            with ThreadPoolExecutor(max_workers=cpu_count) as executor:
+                futures = [
+                    executor.submit(self.download_chunk, url, r[0], r[1], r[2], r[3])
+                    for r in ranges
+                ]
+                for future in futures:
+                    future.result()
+
+            self.status_var.set("Merging downloaded parts...")
+            with open(path, 'wb') as outfile:
+                for temp_file in temp_files:
+                    with open(temp_file, 'rb') as infile:
+                        outfile.write(infile.read())
+                    os.remove(temp_file)
+
+            self.status_var.set("Done! File successfully downloaded.")
+            self.progress_var.set(100)
+            messagebox.showinfo("Done", "Download completed.")
+
+        except Exception as e:
+            self.status_var.set(f"Error: {str(e)}")
+            messagebox.showerror("Error", str(e))
+        finally:
+            self.is_downloading = False
+            self.btn_start.config(state="normal")
 
